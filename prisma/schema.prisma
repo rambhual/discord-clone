@@ -10,7 +10,81 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id   String @id @default(cuid())
+model Profile {
+  id        String    @id @default(cuid())
+  name      String
+  imageUrl  String?   @map("image_url") @db.Text
+  userId    String    @unique @map("user_id")
+  email     String    @unique
+  servers   Server[]
+  members   Member[]
+  channels  Channel[]
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@map("profiles")
+}
+
+model Server {
+  id         String   @id @default(cuid())
+  name       String
+  imageUrl   String?  @map("image_url") @db.Text
+  inviteCode String   @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  channels  Channel[]
+  Profile   Profile?  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId String?
+
+  members Member[]
+
+  @@index([profileId])
+  @@map("servers")
+}
+
+enum MemberRole {
+  ADMIN
+  MODERATOR
+  GUEST
+}
+
+model Member {
+  id   String     @id @default(cuid())
+  role MemberRole @default(MODERATOR)
+
+  Profile   Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId String?
+
+  Server   Server? @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  serverId String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([profileId, serverId])
+  @@map("members")
+}
+
+enum ChannelType {
+  Text
+  AUDIO
+  VIDEO
+}
+
+model Channel {
+  id   String      @id @default(cuid())
   name String
+  type ChannelType @default(Text)
+
+  Profile   Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  Server    Server?  @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  serverId  String?
+
+  @@index([profileId, serverId])
+  @@map("channels")
 }
